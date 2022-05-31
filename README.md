@@ -28,6 +28,10 @@ The repository provides SPARQL 1.1 queries to compute sliding-window
 algorithms in order to _predict_ weather conditions using open records
 from Meteo France and uplifted to RDF in [1].
 
+Basically, users can upload the data provided in the `resources/`
+folder into an RDF triplestore (_e.g._ Apache Jena Fuseki) and use the
+SPARQL query available in `weather-forecast.rq` against these triples.
+
 
 Repository files
 ----------------
@@ -36,6 +40,7 @@ This repository contains:
 
 - `README.md` (this file): providing documentation;
 - `weather-forecast.rq`: the SPARQL able to compute a prediction for average temperatures based on the structure proposed by [1];
+- `resources/`: contains RDF files gathering information about French weather stations (`meteofrance-station.ttl`), and aggregated data from the _BORDEAUX-MERIGNAC_ station for the year 2020 (`outputslice_2020_07510.ttl`);
 - `LICENSE`.
 
 
