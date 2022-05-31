@@ -35,6 +35,7 @@ Repository files
 This repository contains:
 
 - `README.md` (this file): providing documentation;
+- `weather-forecast.rq`: the SPARQL able to compute a prediction for average temperatures based on the structure proposed by [1];
 - `LICENSE`.
 
 
