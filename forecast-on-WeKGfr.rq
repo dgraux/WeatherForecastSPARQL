@@ -1,0 +1,285 @@
+###
+### This query should be executed on <http://weakg.i3s.unice.fr/>
+###
+
+PREFIX geo:        <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX weo:        <http://ns.inria.fr/meteo/ontology/>
+PREFIX geosparql:  <http://www.opengis.net/ont/geosparql#>
+PREFIX geof:       <http://www.opengis.net/def/function/geosparql/>
+PREFIX uom:        <http://www.opengis.net/def/uom/OGC/1.0/>
+PREFIX xsd:        <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdfs:       <http://www.w3.org/2000/01/rdf-schema#>
+
+select ?prediction ?label_station where {
+
+#######################################
+##### Variables to be given as inputs.
+values ?date { "2022-05-23"^^xsd:date }
+values ?avg_temp_today { "25"^^xsd:float }
+values ?avg_temp_today_p1 { "25"^^xsd:float }
+values ?avg_temp_today_p2 { "25"^^xsd:float }
+values ?avg_temp_today_p3 { "25"^^xsd:float }
+values ?avg_temp_today_p4 { "25"^^xsd:float }
+values ?avg_temp_today_p5 { "25"^^xsd:float }
+values ?avg_temp_today_p6 { "25"^^xsd:float }
+#######################################
+#######################################
+
+values ?iter { "0"^^xsd:integer "1"^^xsd:integer "2"^^xsd:integer "3"^^xsd:integer "4"^^xsd:integer "5"^^xsd:integer "6"^^xsd:integer }
+
+# TODAY
+bind (day(?date) as ?cD)
+bind (month(?date) as ?cM)
+bind (year(?date)  as ?cY)
+bind ( if( ( ((?cY/4)*4=?cY) && ((?cY/100)*100!=?cY) ) || ((?cY/400)*400=?cY) , 1, 0) as ?cLeap)
+
+# Last year, same day
+bind (?cY-1 as ?pY)
+bind ( if( ( ((?pY/4)*4=?pY) && ((?pY/100)*100!=?pY) ) || ((?pY/400)*400=?pY) , 1, 0) as ?pLeap)
+bind (if((?cD=29)&&(?cM=2),1,?cD) as ?pD) # if cD-cM is 29 of Feb, then last year was a 1st March.
+bind (if((?cD=29)&&(?cM=2),3,?cM) as ?pM)
+
+# last year, offset day before (using ?iter from the sliding window)
+bind (if (?pD-?iter<1 && ?pM=1, ?pY-1, ?pY) as ?oY)
+bind ( if ( ?pD-?iter < 1 , if (?pM=1,12,?pM-1) , ?pM) as ?oM )
+bind ( if ( ?pD-?iter < 1 && ?pM in (1, 2, 4, 6, 8, 9, 11) , 31-?pD-?iter , if (?pD-?iter<1 && ?pM in (5,7,10,12) ,30-?pD-?iter , if (?pD-?iter<1 && ?pM = 3 && ?pLeap = 1 , 29-?pD-?iter , if (?pD-?iter<1 && ?pM = 3 && ?pLeap = 0 , 28-?pD-?iter, ?pD - ?iter ) ) ) ) as ?oD )
+
+# last year, 1 day before the offset day
+bind (if (?oD=1 && ?oM=1, ?oY-1, ?oY) as ?oYp1)
+bind ( if ( ?oD = 1 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp1 )
+bind ( if ( ?oD = 1 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=1 && ?oM in (5,7,10,12) ,30 , if (?oD=1 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=1 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 1 ) ) ) ) as ?oDp1 )
+
+# last year, 2 days before the offset day
+bind (if (?oD=2 && ?oM=1, ?oY-1, ?oY) as ?oYp2)
+bind ( if ( ?oD = 2 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp2 )
+bind ( if ( ?oD = 2 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=2 && ?oM in (5,7,10,12) ,30 , if (?oD=2 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=2 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 2 ) ) ) ) as ?oDp2 )
+
+# last year, 3 days before the offset day
+bind (if (?oD=3 && ?oM=1, ?oY-1, ?oY) as ?oYp3)
+bind ( if ( ?oD = 3 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp3 )
+bind ( if ( ?oD = 3 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=3 && ?oM in (5,7,10,12) ,30 , if (?oD=3 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=3 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 3 ) ) ) ) as ?oDp3 )
+
+# last year, 4 days before the offset day
+bind (if (?oD=4 && ?oM=1, ?oY-1, ?oY) as ?oYp4)
+bind ( if ( ?oD = 4 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp4 )
+bind ( if ( ?oD = 4 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=4 && ?oM in (5,7,10,12) ,30 , if (?oD=4 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=4 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 4 ) ) ) ) as ?oDp4 )
+
+# last year, 5 days before the offset day
+bind (if (?oD=5 && ?oM=1, ?oY-1, ?oY) as ?oYp5)
+bind ( if ( ?oD = 5 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp5 )
+bind ( if ( ?oD = 5 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=5 && ?oM in (5,7,10,12) ,30 , if (?oD=5 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=5 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 5 ) ) ) ) as ?oDp5 )
+
+# last year, 6 days before the offset day
+bind (if (?oD=6 && ?oM=1, ?oY-1, ?oY) as ?oYp6)
+bind ( if ( ?oD = 6 , if (?oM=1,12,?oM-1) , ?oM) as ?oMp6 )
+bind ( if ( ?oD = 6 && ?oM in (1, 2, 4, 6, 8, 9, 11) , 31 , if (?oD=6 && ?oM in (5,7,10,12) ,30 , if (?oD=6 && ?oM = 3 && ?pLeap = 1 , 29 , if (?oD=6 && ?oM = 3 && ?pLeap = 0 , 28, ?oD - 6 ) ) ) ) as ?oDp6 )
+
+
+
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep0 ?avg_temp0 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+      values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep0 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp0 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp0 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp0 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep1 ?avg_temp1 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+           values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep1 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp1 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp1 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp1 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  Select  ?label_station ?Datep2 ?avg_temp2 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+           values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep2 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp2 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp2 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp2 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep3 ?avg_temp3 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+           values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep3 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp3 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp3 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp3 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep4 ?avg_temp4 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+          values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep4 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp4 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp4 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp4 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep5 ?avg_temp5 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+          values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep5 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp5 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp5 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp5 .
+  }
+ }
+SERVICE <http://weakg.i3s.unice.fr/sparql> {
+  SELECT  ?label_station ?Datep6 ?avg_temp6 Where {
+   # Closest station
+   {
+    SELECT ?stationID ?label_station ?distance WHERE {
+     ?stationID a <http://ns.inria.fr/meteo/ontology/WeatherStation> .
+     ?stationID rdfs:label ?label_station .
+     ?stationID geosparql:hasGeometry [ geosparql:asWKT ?coordinates] .
+     ?stationID  geo:lat ?lat .
+     ?stationID geo:long ?long .
+           values ?LA { "43.7101728" } values ?LO { "7.2619532" }
+     BIND ( ( FLOOR(( (1*(xsd:double(?lat)-xsd:double(?LA))*(xsd:double(?lat)-xsd:double(?LA))) + (1*(xsd:double(?long)-xsd:double(?LO))*(xsd:double(?long)-xsd:double(?LO))) )*100)/100 ) AS ?distance )
+    } ORDER BY ?distance LIMIT 1
+   }
+   # Obtient les observations des slices pour la station concernée.
+   ?x a <http://purl.org/linked-data/cube#Slice> .
+   ?x <http://ns.inria.fr/meteo/observationslice/dimension#station> ?stationID .
+   ?x <http://purl.org/linked-data/cube#observation> ?obs .
+   # Filtre les observations agrégées sur la bonne date.
+   ?obs a <http://purl.org/linked-data/cube#Observation> .
+   ?obs <http://ns.inria.fr/meteo/observationslice/attribute#observationDate> ?Datep6 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#minDailyTemperature> ?min_temp6 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#maxDailyTemperature> ?max_temp6 .
+   ?obs <http://ns.inria.fr/meteo/observationslice/measure#avgDailyTemperature> ?avg_temp6 .
+  }
+ }
+
+FILTER ( day(?Datep0)=?oD && month(?Datep0)=?oM && year(?Datep0)=?oY )
+FILTER ( day(?Datep1)=?oDp1 && month(?Datep1)=?oMp1 && year(?Datep1)=?oYp1 )
+FILTER ( day(?Datep2)=?oDp2 && month(?Datep2)=?oMp2 && year(?Datep2)=?oYp2 )
+FILTER ( day(?Datep3)=?oDp3 && month(?Datep3)=?oMp3 && year(?Datep3)=?oYp3 )
+FILTER ( day(?Datep4)=?oDp4 && month(?Datep4)=?oMp4 && year(?Datep4)=?oYp4 )
+FILTER ( day(?Datep5)=?oDp5 && month(?Datep5)=?oMp5 && year(?Datep5)=?oYp5 )
+FILTER ( day(?Datep6)=?oDp6 && month(?Datep6)=?oMp6 && year(?Datep6)=?oYp6 )
+
+bind ( ( ?avg_temp_today - ?avg_temp_today_p6 )/6.0 as ?var_this_year )
+
+bind ( ( ?avg_temp0 - ?avg_temp6 )/6.0 as ?var_last_year )
+
+bind ( ?avg_temp_today + ( ?var_this_year + ?var_last_year ) / 2.0 as ?prediction )
+
+bind ( (?avg_temp_today-?avg_temp0)*(?avg_temp_today-?avg_temp0) +
+       (?avg_temp_today_p1-?avg_temp1)*(?avg_temp_today_p1-?avg_temp1) +
+       (?avg_temp_today_p2-?avg_temp2)*(?avg_temp_today_p2-?avg_temp2) +
+       (?avg_temp_today_p3-?avg_temp3)*(?avg_temp_today_p3-?avg_temp3) +
+       (?avg_temp_today_p4-?avg_temp4)*(?avg_temp_today_p4-?avg_temp4) +
+       (?avg_temp_today_p5-?avg_temp5)*(?avg_temp_today_p5-?avg_temp5) +
+       (?avg_temp_today_p6-?avg_temp6)*(?avg_temp_today_p6-?avg_temp6)
+       as ?distance )
+
+} order by ?distance limit 1

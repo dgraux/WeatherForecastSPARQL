@@ -41,6 +41,7 @@ This repository contains:
 - `README.md` (this file): providing documentation;
 - `weather-forecast.rq`: the SPARQL able to compute a prediction for average temperatures based on the structure proposed by [1];
 - `resources/`: contains RDF files gathering information about French weather stations (`meteofrance-station.ttl`), and aggregated data from the _BORDEAUX-MERIGNAC_ station for the year 2020 (`outputslice_2020_07510.ttl`);
+- `forecast-on-WeKGfr.rq`: is the SPARQL query to be executed directly on the WeaKG endpoint <http://weakg.i3s.unice.fr/> which provided users with the complete French weather records from the past years, uplifted by the authors of [1]. In particular, this query will give a prediction for the average temperature to come after the _May 23rd 2022_ around _Nice_ (lat:43.7101728, long: 7.2619532), obviously these inputs can be changed;
 - `LICENSE`.
 
 
